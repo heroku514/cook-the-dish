@@ -32,5 +32,18 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   pgdata:
