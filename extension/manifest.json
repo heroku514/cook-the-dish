@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "CookTheDish",
+  "version": "0.1.0",
+  "description": "AI-powered grocery shopping — real Instacart prices for any recipe",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.instacart.com/*",
+    "https://cookthedish.dev01.top/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.instacart.com/*"],
+      "js": ["src/content/instacart-scraper.ts"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "src/assets/icon-16.png",
+      "48": "src/assets/icon-48.png",
+      "128": "src/assets/icon-128.png"
+    }
+  }
+}

@@ -14,8 +14,8 @@ export function regionCode(lat: number, lng: number): string {
 }
 
 export function productMatchKey(
-  ingredients: RecipeIngredient[],
-  stores: Store[],
+  ingredients: readonly RecipeIngredient[],
+  stores: readonly Store[],
   lat: number,
   lng: number
 ): string {
@@ -32,5 +32,22 @@ export function productMatchKey(
   const region = regionCode(lat, lng);
 
   const raw = `${ingNames}::${chains}::${region}`;
+  return createHash("sha256").update(raw).digest("hex").slice(0, 32);
+}
+
+export function instacartCacheKey(
+  ingredients: { name: string; in_pantry?: boolean }[],
+  lat: number,
+  lng: number
+): string {
+  const ingNames = ingredients
+    .filter((i) => !i.in_pantry)
+    .map((i) => i.name.toLowerCase())
+    .sort()
+    .join("|");
+
+  const region = regionCode(lat, lng);
+
+  const raw = `${ingNames}::instacart::${region}`;
   return createHash("sha256").update(raw).digest("hex").slice(0, 32);
 }
