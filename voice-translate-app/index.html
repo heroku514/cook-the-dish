@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#1a1a1f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="语音备忘" />
+    <title>语音备忘</title>
+    <style>
+      :root {
+        --bg: #f4f4f6;
+        --surface: #ffffff;
+        --surface-2: #ececf0;
+        --ink: #1a1a1f;
+        --ink-2: #54545a;
+        --muted: #8a8a92;
+        --line: #e2e2e7;
+        --accent: #d9434f;
+        --accent-ink: #ffffff;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 24px rgba(0, 0, 0, 0.05);
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #15151a;
+          --surface: #1f1f25;
+          --surface-2: #2a2a31;
+          --ink: #f3f3f5;
+          --ink-2: #c4c4cc;
+          --muted: #80808a;
+          --line: #2e2e36;
+          --accent: #ff5a66;
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 24px rgba(0, 0, 0, 0.35);
+        }
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", "SF Pro Text", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      header {
+        padding: calc(var(--safe-top) + 16px) 18px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--bg);
+      }
+      header h1 { font-size: 22px; margin: 0; font-weight: 700; letter-spacing: 0.5px; }
+      header .icon-btn {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        border: 0;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+        display: flex; align-items: center; justify-content: center;
+        color: var(--ink-2);
+        cursor: pointer;
+      }
+      header .icon-btn svg { width: 18px; height: 18px; }
+      main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px 14px 200px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 80px 20px;
+        font-size: 14px;
+      }
+      .memo {
+        background: var(--surface);
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        box-shadow: var(--shadow);
+      }
+      .memo .row1 {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .memo .title { font-weight: 600; font-size: 15px; }
+      .memo .when { font-size: 12px; color: var(--muted); flex-shrink: 0; }
+      .memo .duration {
+        font-size: 12px; color: var(--muted);
+        margin-top: 2px;
+      }
+      .memo .body {
+        margin-top: 10px;
+        font-size: 15px;
+        line-height: 1.55;
+        color: var(--ink);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .memo .src {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        border-top: 1px dashed var(--line);
+        padding-top: 8px;
+        max-height: 90px;
+        overflow: hidden;
+        position: relative;
+      }
+      .memo .src.expanded { max-height: none; }
+      .memo .src-toggle {
+        font-size: 12px;
+        color: var(--accent);
+        background: none;
+        border: 0;
+        padding: 6px 0 0;
+        cursor: pointer;
+      }
+      .memo .status {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .memo .status.err { color: var(--accent); }
+      .memo .actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .memo .actions button {
+        font-size: 12px;
+        padding: 5px 10px;
+        background: var(--surface-2);
+        color: var(--ink-2);
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .spin {
+        display: inline-block;
+        width: 12px; height: 12px;
+        border: 2px solid var(--muted);
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: sp 0.8s linear infinite;
+      }
+      @keyframes sp { to { transform: rotate(360deg); } }
+      .dock {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        padding: 18px 18px calc(var(--safe-bottom) + 22px);
+        background: linear-gradient(to top, var(--bg) 60%, transparent);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        pointer-events: none;
+      }
+      .dock > * { pointer-events: auto; }
+      .timer {
+        font-variant-numeric: tabular-nums;
+        font-size: 14px;
+        color: var(--ink-2);
+        min-height: 18px;
+      }
+      .timer.rec { color: var(--accent); }
+      .rec-btn {
+        width: 76px; height: 76px;
+        border-radius: 50%;
+        background: var(--surface);
+        border: 4px solid var(--line);
+        box-shadow: var(--shadow);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.1s ease;
+      }
+      .rec-btn:active { transform: scale(0.96); }
+      .rec-btn .inner {
+        width: 54px; height: 54px;
+        border-radius: 50%;
+        background: var(--accent);
+        transition: border-radius 0.2s ease, width 0.2s ease, height 0.2s ease;
+      }
+      .rec-btn.rec .inner {
+        width: 26px; height: 26px;
+        border-radius: 6px;
+      }
+      .err-banner {
+        font-size: 13px;
+        color: var(--accent);
+        text-align: center;
+        max-width: 320px;
+      }
+      /* settings sheet */
+      .sheet-back {
+        position: fixed; inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 20;
+      }
+      .sheet-back.open { opacity: 1; pointer-events: auto; }
+      .sheet {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        background: var(--surface);
+        border-radius: 18px 18px 0 0;
+        padding: 18px 20px calc(var(--safe-bottom) + 22px);
+        transform: translateY(100%);
+        transition: transform 0.25s ease;
+        z-index: 21;
+        max-height: 88vh;
+        overflow-y: auto;
+      }
+      .sheet.open { transform: translateY(0); }
+      .sheet h2 { font-size: 17px; margin: 0 0 4px; }
+      .sheet .hint { font-size: 12px; color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+      .sheet label {
+        display: block;
+        font-size: 13px;
+        color: var(--ink-2);
+        margin: 12px 0 6px;
+      }
+      .sheet input, .sheet select {
+        width: 100%;
+        padding: 10px 12px;
+        font-size: 15px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: inherit;
+      }
+      .sheet input[type="password"] { letter-spacing: 1px; }
+      .sheet .row {
+        display: flex;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .sheet .row button {
+        flex: 1;
+        padding: 12px;
+        border-radius: 10px;
+        font-size: 15px;
+        border: 0;
+        cursor: pointer;
+      }
+      .sheet .row .save {
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 600;
+      }
+      .sheet .row .cancel {
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .check-row {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 13px; color: var(--ink-2);
+        margin-top: 12px;
+      }
+      .footer-note {
+        margin-top: 18px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>语音备忘</h1>
+      <button class="icon-btn" id="settings-btn" aria-label="设置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </header>
+
+    <main id="main">
+      <div class="empty" id="empty">还没有备忘 · 点下方按钮开始录音</div>
+    </main>
+
+    <div class="dock">
+      <div class="timer" id="timer"></div>
+      <button class="rec-btn" id="rec-btn" aria-label="开始录音">
+        <span class="inner"></span>
+      </button>
+      <div class="err-banner" id="err-banner" hidden></div>
+    </div>
+
+    <div class="sheet-back" id="sheet-back"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-label="设置">
+      <h2>设置</h2>
+      <p class="hint">
+        Key 仅存在本机浏览器,从不上传任何第三方服务器(直接由本设备调用 OpenAI 与
+        Anthropic 官方接口)。
+      </p>
+
+      <label for="k-openai">OpenAI API Key(用于英文转写 · Whisper)</label>
+      <input id="k-openai" type="password" placeholder="sk-..." autocomplete="off" />
+
+      <label for="k-anthropic">Anthropic API Key(用于中文翻译 · Claude)</label>
+      <input id="k-anthropic" type="password" placeholder="sk-ant-..." autocomplete="off" />
+
+      <label for="model">翻译模型</label>
+      <select id="model">
+        <option value="claude-sonnet-4-6">Claude Sonnet 4.6(推荐 · 均衡)</option>
+        <option value="claude-opus-4-7">Claude Opus 4.7(最高质量 · 较慢较贵)</option>
+        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5(最快最便宜)</option>
+      </select>
+
+      <div class="check-row">
+        <input type="checkbox" id="keep-en" />
+        <label for="keep-en" style="margin: 0">同时保留英文原文</label>
+      </div>
+
+      <div class="row">
+        <button class="cancel" id="sheet-cancel">取消</button>
+        <button class="save" id="sheet-save">保存</button>
+      </div>
+
+      <div class="footer-note">
+        隐蔽提示:开会前先把屏幕亮度调到最低,本 App 保持在前台。iOS Safari 在锁屏或
+        切到别的 App 时会自动停止麦克风,这是浏览器限制。
+      </div>
+    </div>
+
+    <script>
+      // ---------- storage ----------
+      const LS_KEYS = "vt.keys.v1";
+      const LS_MEMOS = "vt.memos.v1";
+      function loadKeys() {
+        try { return JSON.parse(localStorage.getItem(LS_KEYS)) || {}; }
+        catch { return {}; }
+      }
+      function saveKeys(k) { localStorage.setItem(LS_KEYS, JSON.stringify(k)); }
+      function loadMemos() {
+        try { return JSON.parse(localStorage.getItem(LS_MEMOS)) || []; }
+        catch { return []; }
+      }
+      function saveMemos(m) { localStorage.setItem(LS_MEMOS, JSON.stringify(m)); }
+
+      // ---------- state ----------
+      let keys = loadKeys();
+      let memos = loadMemos();
+      let recorder = null;
+      let chunkBlobs = [];
+      let chunkStartedAt = 0;
+      let sessionStartedAt = 0;
+      let timerInterval = null;
+      let isRecording = false;
+      let restartTimeout = null;
+      const CHUNK_MS = 4 * 60 * 1000; // 4-minute chunks; stays well under Whisper's 25MB limit
+
+      // ---------- ui refs ----------
+      const main = document.getElementById("main");
+      const empty = document.getElementById("empty");
+      const recBtn = document.getElementById("rec-btn");
+      const timer = document.getElementById("timer");
+      const errBanner = document.getElementById("err-banner");
+      const settingsBtn = document.getElementById("settings-btn");
+      const sheet = document.getElementById("sheet");
+      const sheetBack = document.getElementById("sheet-back");
+      const sheetSave = document.getElementById("sheet-save");
+      const sheetCancel = document.getElementById("sheet-cancel");
+      const kOpenAI = document.getElementById("k-openai");
+      const kAnthropic = document.getElementById("k-anthropic");
+      const kModel = document.getElementById("model");
+      const kKeepEn = document.getElementById("keep-en");
+
+      // ---------- helpers ----------
+      function fmtTime(ms) {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
+      }
+      function fmtWhen(ts) {
+        const d = new Date(ts);
+        const today = new Date();
+        const sameDay = d.toDateString() === today.toDateString();
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        if (sameDay) return `${hh}:${mm}`;
+        return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
+      }
+      function showErr(msg) {
+        errBanner.hidden = false;
+        errBanner.textContent = msg;
+      }
+      function clearErr() {
+        errBanner.hidden = true;
+        errBanner.textContent = "";
+      }
+      function uid() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      }
+
+      // ---------- rendering ----------
+      function render() {
+        empty.hidden = memos.length > 0;
+        const existing = new Map();
+        for (const el of main.querySelectorAll(".memo")) {
+          existing.set(el.dataset.id, el);
+        }
+        main.querySelectorAll(".memo").forEach((el) => el.remove());
+
+        for (const m of memos) {
+          const el = document.createElement("div");
+          el.className = "memo";
+          el.dataset.id = m.id;
+
+          const row1 = document.createElement("div");
+          row1.className = "row1";
+          const title = document.createElement("div");
+          title.className = "title";
+          title.textContent = m.title || "新备忘";
+          const when = document.createElement("div");
+          when.className = "when";
+          when.textContent = fmtWhen(m.createdAt);
+          row1.appendChild(title);
+          row1.appendChild(when);
+          el.appendChild(row1);
+
+          const dur = document.createElement("div");
+          dur.className = "duration";
+          dur.textContent = `时长 ${fmtTime(m.durationMs || 0)}`;
+          el.appendChild(dur);
+
+          if (m.status === "done") {
+            const body = document.createElement("div");
+            body.className = "body";
+            body.textContent = m.translation || "(无翻译)";
+            el.appendChild(body);
+
+            if (m.keepEn && m.transcript) {
+              const src = document.createElement("div");
+              src.className = "src";
+              src.textContent = m.transcript;
+              el.appendChild(src);
+              const toggle = document.createElement("button");
+              toggle.className = "src-toggle";
+              toggle.textContent = "展开英文原文";
+              toggle.onclick = () => {
+                src.classList.toggle("expanded");
+                toggle.textContent = src.classList.contains("expanded")
+                  ? "收起英文原文"
+                  : "展开英文原文";
+              };
+              el.appendChild(toggle);
+            }
+          } else if (m.status === "error") {
+            const st = document.createElement("div");
+            st.className = "status err";
+            st.textContent = m.error || "处理失败";
+            el.appendChild(st);
+          } else {
+            const st = document.createElement("div");
+            st.className = "status";
+            const sp = document.createElement("span");
+            sp.className = "spin";
+            st.appendChild(sp);
+            const tx = document.createElement("span");
+            tx.textContent = m.status === "translating" ? "翻译中…" : "转写中…";
+            st.appendChild(tx);
+            el.appendChild(st);
+          }
+
+          const actions = document.createElement("div");
+          actions.className = "actions";
+          const del = document.createElement("button");
+          del.textContent = "删除";
+          del.onclick = () => {
+            memos = memos.filter((x) => x.id !== m.id);
+            saveMemos(memos);
+            render();
+          };
+          actions.appendChild(del);
+          if (m.status === "done" && m.translation) {
+            const copy = document.createElement("button");
+            copy.textContent = "复制中文";
+            copy.onclick = async () => {
+              try {
+                await navigator.clipboard.writeText(m.translation);
+                copy.textContent = "已复制";
+                setTimeout(() => (copy.textContent = "复制中文"), 1200);
+              } catch {}
+            };
+            actions.appendChild(copy);
+          }
+          if (m.status === "error" && m.chunks && m.chunks.length) {
+            const retry = document.createElement("button");
+            retry.textContent = "重试";
+            retry.onclick = () => processMemo(m.id);
+            actions.appendChild(retry);
+          }
+          el.appendChild(actions);
+
+          main.appendChild(el);
+        }
+      }
+
+      function updateMemo(id, patch) {
+        const idx = memos.findIndex((m) => m.id === id);
+        if (idx < 0) return;
+        memos[idx] = { ...memos[idx], ...patch };
+        saveMemos(memos);
+        render();
+      }
+
+      // ---------- recording ----------
+      function pickMime() {
+        const opts = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+          "audio/mpeg",
+          "audio/aac",
+        ];
+        for (const m of opts) {
+          if (
+            typeof MediaRecorder !== "undefined" &&
+            MediaRecorder.isTypeSupported &&
+            MediaRecorder.isTypeSupported(m)
+          ) {
+            return m;
+          }
+        }
+        return "";
+      }
+      function mimeToExt(mime) {
+        if (!mime) return "webm";
+        if (mime.includes("mp4")) return "mp4";
+        if (mime.includes("mpeg")) return "mp3";
+        if (mime.includes("aac")) return "aac";
+        return "webm";
+      }
+
+      async function startRecording() {
+        clearErr();
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+          showErr("无法获取麦克风权限,请在浏览器设置中允许后重试");
+          return;
+        }
+        const mime = pickMime();
+        chunkBlobs = [];
+        chunkStartedAt = Date.now();
+        sessionStartedAt = Date.now();
+        isRecording = true;
+
+        const startChunk = () => {
+          const r = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+          const parts = [];
+          r.ondataavailable = (e) => { if (e.data && e.data.size > 0) parts.push(e.data); };
+          r.onstop = () => {
+            if (parts.length) {
+              chunkBlobs.push(new Blob(parts, { type: r.mimeType || mime || "audio/webm" }));
+            }
+            if (isRecording) {
+              chunkStartedAt = Date.now();
+              startChunk();
+            } else {
+              for (const t of stream.getTracks()) t.stop();
+              finalizeRecording();
+            }
+          };
+          r.start();
+          recorder = r;
+          restartTimeout = setTimeout(() => {
+            if (recorder && recorder.state === "recording") recorder.stop();
+          }, CHUNK_MS);
+        };
+        startChunk();
+
+        recBtn.classList.add("rec");
+        recBtn.setAttribute("aria-label", "停止录音");
+        timer.classList.add("rec");
+        timer.textContent = "00:00";
+        timerInterval = setInterval(() => {
+          timer.textContent = fmtTime(Date.now() - sessionStartedAt);
+        }, 250);
+      }
+
+      function stopRecording() {
+        if (!recorder) return;
+        isRecording = false;
+        if (restartTimeout) { clearTimeout(restartTimeout); restartTimeout = null; }
+        if (recorder.state === "recording") recorder.stop();
+        recBtn.classList.remove("rec");
+        recBtn.setAttribute("aria-label", "开始录音");
+        timer.classList.remove("rec");
+        clearInterval(timerInterval);
+        timer.textContent = "";
+      }
+
+      function finalizeRecording() {
+        const durationMs = Date.now() - sessionStartedAt;
+        const id = uid();
+        const memo = {
+          id,
+          createdAt: Date.now(),
+          durationMs,
+          title: "新备忘",
+          status: "transcribing",
+          chunks: chunkBlobs,
+          transcript: "",
+          translation: "",
+          error: "",
+          keepEn: kKeepEn.checked,
+        };
+        memos.unshift(memo);
+        saveMemos(memos);
+        render();
+        recorder = null;
+        chunkBlobs = [];
+        processMemo(id);
+      }
+
+      // ---------- API calls ----------
+      async function transcribeChunk(blob) {
+        if (!keys.openai) throw new Error("请先在设置中填写 OpenAI API Key");
+        const ext = mimeToExt(blob.type);
+        const fd = new FormData();
+        fd.append("file", blob, `audio.${ext}`);
+        fd.append("model", "whisper-1");
+        fd.append("language", "en");
+        fd.append("response_format", "json");
+        const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${keys.openai}` },
+          body: fd,
+        });
+        if (!res.ok) {
+          const t = await res.text().catch(() => "");
+          throw new Error(`转写失败 (${res.status}) ${t.slice(0, 120)}`);
+        }
+        const json = await res.json();
+        return (json.text || "").trim();
+      }
+
+      async function translateToZh(englishText, model) {
+        if (!keys.anthropic) throw new Error("请先在设置中填写 Anthropic API Key");
+        const body = {
+          model,
+          max_tokens: 4096,
+          system:
+            "你是会议口译员。把用户给的英文内容完整翻译成自然、通顺的简体中文。" +
+            "保留专有名词与数字。只输出中文翻译,不要加任何解释、引号或前缀。",
+          messages: [{ role: "user", content: englishText }],
+        };
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-api-key": keys.anthropic,
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+          },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const t = await res.text().catch(() => "");
+          throw new Error(`翻译失败 (${res.status}) ${t.slice(0, 120)}`);
+        }
+        const json = await res.json();
+        const out = (json.content || [])
+          .filter((b) => b.type === "text")
+          .map((b) => b.text)
+          .join("\n")
+          .trim();
+        return out;
+      }
+
+      async function summarizeTitle(zhText, model) {
+        try {
+          const body = {
+            model,
+            max_tokens: 40,
+            system:
+              "用 6 到 12 个汉字概括下面这段中文,作为备忘录标题。" +
+              "只输出标题,不要标点,不要引号。",
+            messages: [{ role: "user", content: zhText.slice(0, 800) }],
+          };
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-api-key": keys.anthropic,
+              "anthropic-version": "2023-06-01",
+              "anthropic-dangerous-direct-browser-access": "true",
+            },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) return "";
+          const json = await res.json();
+          const t = (json.content || [])
+            .filter((b) => b.type === "text")
+            .map((b) => b.text)
+            .join("")
+            .trim();
+          return t.replace(/[「」"'。.！!？?]/g, "").slice(0, 16);
+        } catch { return ""; }
+      }
+
+      async function processMemo(id) {
+        const memo = memos.find((m) => m.id === id);
+        if (!memo) return;
+        updateMemo(id, { status: "transcribing", error: "" });
+        try {
+          const chunks = memo.chunks || [];
+          if (!chunks.length) throw new Error("录音为空");
+          const transcripts = [];
+          for (let i = 0; i < chunks.length; i++) {
+            const t = await transcribeChunk(chunks[i]);
+            transcripts.push(t);
+          }
+          const transcript = transcripts.join("\n").trim();
+          updateMemo(id, { transcript, status: "translating" });
+          if (!transcript) {
+            updateMemo(id, { status: "done", translation: "(未识别到语音内容)" });
+            return;
+          }
+          const model = keys.model || "claude-sonnet-4-6";
+          const translation = await translateToZh(transcript, model);
+          const title = (await summarizeTitle(translation, model)) || "新备忘";
+          updateMemo(id, { status: "done", translation, title });
+        } catch (e) {
+          updateMemo(id, { status: "error", error: String(e.message || e) });
+        }
+      }
+
+      // ---------- settings ----------
+      function openSheet() {
+        kOpenAI.value = keys.openai || "";
+        kAnthropic.value = keys.anthropic || "";
+        kModel.value = keys.model || "claude-sonnet-4-6";
+        kKeepEn.checked = !!keys.keepEn;
+        sheet.classList.add("open");
+        sheetBack.classList.add("open");
+      }
+      function closeSheet() {
+        sheet.classList.remove("open");
+        sheetBack.classList.remove("open");
+      }
+
+      // ---------- events ----------
+      recBtn.addEventListener("click", () => {
+        if (isRecording) stopRecording();
+        else startRecording();
+      });
+      settingsBtn.addEventListener("click", openSheet);
+      sheetBack.addEventListener("click", closeSheet);
+      sheetCancel.addEventListener("click", closeSheet);
+      sheetSave.addEventListener("click", () => {
+        keys = {
+          openai: kOpenAI.value.trim(),
+          anthropic: kAnthropic.value.trim(),
+          model: kModel.value,
+          keepEn: kKeepEn.checked,
+        };
+        saveKeys(keys);
+        closeSheet();
+      });
+
+      // ---------- boot ----------
+      render();
+      if (!keys.openai || !keys.anthropic) {
+        showErr("首次使用请先点右上角设置填入 API Key");
+      }
+    </script>
+  </body>
+</html>
