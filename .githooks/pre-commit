@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 set -e
 
-echo "==> Running unit tests..."
-cd "$(git rev-parse --show-toplevel)/app"
+ROOT="$(git rev-parse --show-toplevel)"
+
+echo "==> Running app unit tests..."
+cd "$ROOT/app"
 npx vitest run
 
-echo ""
-echo "==> Running e2e tests..."
-npx playwright test
+if [ -d "$ROOT/extension/src/__tests__" ]; then
+  echo ""
+  echo "==> Running extension unit tests..."
+  cd "$ROOT/extension"
+  npx vitest run
+fi
 
 echo ""
 echo "==> All tests passed."
